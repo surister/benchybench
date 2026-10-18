@@ -1,0 +1,63 @@
+name: "Benchmark some very cool"
+
+parameters:
+  a:
+    - {batch_size: 100,  table: ht_direct_compress_100}
+    - {batch_size: 250,  table: ht_direct_compress_250}
+  b:
+    - [1, 2, 3]
+  myvalue: ["value a", "value b"]
+  coolness: 35
+
+provides: ["{p[table]}"]
+
+# This benchmark will run after `some_table` benchmark.
+requires: [some_table]
+
+# Runs before every distinct `benchmark` run, nothing is measured.
+# Use this for:
+# - create table/schemas
+prepare-benchmark:
+  # steps are sequential
+  steps:
+    - run: |
+        -- should have same schema as ht_metrics
+        -- sql comments are valid
+        CREATE TABLE my_Wonderful_table (a TEXT)
+
+# The run definition of the benchmark.
+benchmark:
+
+  # Sets a benchmark-wide session
+  session:
+    - SET timescaledb.enable_direct_compress_insert = false
+    - SET timescaledb.enable_direct_compress_insert_client_sorted = false
+
+  # The number of times every `measured` statement will run, defaults to 5.
+  executions: 2
+  steps:
+
+    # The statements that will be run.
+
+    - name: "insert"
+      before_run: |
+        SET timescaledb.compression_batch_size_limit = {p[batch_size]};
+
+      # The statement that will be measured, runs after `before_statement` completes.
+      run: |
+        INSERT INTO {p[table]} SELECT * FROM ht_metrics ORDER BY device, time LIMIT 5000000;
+
+    - name: "parallel index creation"
+      parallel: True
+      run: |
+        CREATE INDEX ON {p[table]}(time DESC);
+        CREATE INDEX ON {p[table]}(device,time DESC);
+
+teardown:
+  steps:
+    - run: |
+        VACUUM freeze analyze {p[table]};
+        RESET timescaledb.compression_batch_size_limit;
+        RESET timescaledb.enable_direct_compress_insert;
+        RESET timescaledb.enable_direct_compress_insert_sort_batches;
+        RESET timescaledb.enable_direct_compress_insert_client_sorted;

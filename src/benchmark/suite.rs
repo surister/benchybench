@@ -1,0 +1,5 @@
+
+struct Suite {
+    name: String,
+}
+
