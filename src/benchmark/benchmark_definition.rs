@@ -1,7 +1,19 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-fn default_false_value() -> bool {
-    false
+
+/// Represents a Suite, a collection of `BenchmarkDefinition`s
+struct Suite {
+    name: String,
+    benchmark_definition: Vec<BenchmarkDefinition>
+}
+
+impl Suite {
+    fn new(name: String, benchmarks: Vec<BenchmarkDefinition>) -> Suite {
+        Suite {
+            name,
+            benchmark_definition: benchmarks
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]

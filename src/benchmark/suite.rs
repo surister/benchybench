@@ -1,5 +1,2 @@
 
-struct Suite {
-    name: String,
-}
 
