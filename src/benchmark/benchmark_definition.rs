@@ -4,18 +4,20 @@ use std::collections::HashMap;
 /// Represents a Suite, a collection of `BenchmarkDefinition`s
 struct Suite {
     name: String,
-    benchmark_definition: Vec<BenchmarkDefinition>
+    benchmark_definition: Vec<BenchmarkDefinition>,
 }
 
 impl Suite {
     fn new(name: String, benchmarks: Vec<BenchmarkDefinition>) -> Suite {
         Suite {
             name,
-            benchmark_definition: benchmarks
+            benchmark_definition: benchmarks,
         }
     }
 }
 
+/// Represents the entire benchmark definition. It provides all the necessary
+/// fields to run a benchmark.
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct BenchmarkDefinition {
@@ -32,10 +34,21 @@ pub(crate) struct BenchmarkDefinition {
     teardown_step: Option<PrepareBenchmarkStep>,
 }
 
+/// Represents the benchmark step, e.g.
+/// ```
+/// benchmark: # <-------
+///
+///   # Sets a benchmark-wide session
+///   session:
+///     - SET timescaledb.enable_direct_compress_insert = false
+/// ```
 #[derive(Debug, Deserialize, Serialize)]
 struct BenchmarkStep {
+    /// The session parameters for the benchmark run, set for all runs.
     session: Vec<SessionValue>,
+    /// The number of times the benchmark will run.
     executions: u8,
+    /// The statements that will be benchmarked.
     steps: Vec<Statement>,
 }
 
@@ -44,6 +57,18 @@ struct PrepareBenchmarkStep {
     steps: Vec<Statement>,
 }
 
+/// Represents the possible value for a session parameter, e.g.
+/// ```
+/// benchmark:
+///
+///   # Sets a benchmark-wide session
+///   session: # <-------
+///     - SET timescaledb.enable_direct_compress_insert = false
+/// ```
+/// It would produce:
+/// `SessionValue('SET timescaledb.enable_direct_compress_insert = false')`
+///
+/// It can only be a `String` or `None`
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(untagged)]
 enum SessionValue {
@@ -94,7 +119,7 @@ mod tests {
     #[test]
     fn test_can_parse_yaml() {
         let mut contents = String::new();
-        File::open("benchmarks/bench.yml")
+        File::open("../../benchmarks/benchy_definition.yml")
             .unwrap()
             .read_to_string(&mut contents)
             .unwrap();
@@ -103,12 +128,12 @@ mod tests {
             .unwrap_or_else(|error| panic!("failed to parse benchmark YAML:\n{error:#?}"));
     }
 
-    /// Test that a parsed bench.yml, the file that contains all keywords,
+    /// Test that a parsed benchy_definition.yml, the file that contains all keywords,
     /// contains every expected struct.
     #[test]
     fn test_has_all_fields_exists() {
         let mut contents = String::new();
-        File::open("benchmarks/bench.yml")
+        File::open("../../benchmarks/benchy_definition.yml")
             .unwrap()
             .read_to_string(&mut contents)
             .unwrap();
