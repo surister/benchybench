@@ -1,4 +1,5 @@
 name: "Benchmark some very cool"
+benchy_version: "0.0.1"
 
 parameters:
   a:

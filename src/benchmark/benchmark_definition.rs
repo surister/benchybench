@@ -21,7 +21,10 @@ impl Suite {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct BenchmarkDefinition {
+    /// The name of the benchmark.
     pub(crate) name: String,
+    /// The version of the benchmark, sem–ver style.
+    pub(crate) version: String,
     pub(crate) parameters: Option<HashMap<String, ParameterValue>>,
     pub(crate) provides: Option<Vec<String>>,
     #[serde(rename(serialize = "requires", deserialize = "requires"))]
