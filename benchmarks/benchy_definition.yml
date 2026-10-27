@@ -1,5 +1,8 @@
 name: "Benchmark some very cool"
-benchy_version: "0.0.1"
+version: "0.0.1"
+# The type of benchmark, defaults to 'postgres'
+type: postgres
+
 
 parameters:
   a:

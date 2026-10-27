@@ -2,17 +2,16 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Represents a Suite, a collection of `BenchmarkDefinition`s
-struct Suite {
-    name: String,
-    benchmark_definition: Vec<BenchmarkDefinition>,
+pub(crate) struct Suite {
+    /// The name of the suite.
+    pub(crate) name: String,
+    /// All the benchmark that belong to the suite.
+    pub(crate) benchmarks: Vec<BenchmarkDefinition>,
 }
 
 impl Suite {
-    fn new(name: String, benchmarks: Vec<BenchmarkDefinition>) -> Suite {
-        Suite {
-            name,
-            benchmark_definition: benchmarks,
-        }
+    pub(crate) fn new(name: String, benchmarks: Vec<BenchmarkDefinition>) -> Suite {
+        Suite { name, benchmarks }
     }
 }
 
@@ -21,6 +20,11 @@ impl Suite {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct BenchmarkDefinition {
+    #[serde(
+        rename(serialize = "type", deserialize = "type"),
+        default = "default_type"
+    )]
+    pub(crate) runner_type: String,
     /// The name of the benchmark.
     pub(crate) name: String,
     /// The version of the benchmark, sem–ver style.
@@ -30,11 +34,15 @@ pub(crate) struct BenchmarkDefinition {
     #[serde(rename(serialize = "requires", deserialize = "requires"))]
     requires_step: Option<Vec<String>>,
     #[serde(rename(serialize = "benchmark", deserialize = "benchmark"))]
-    benchmark_step: BenchmarkStep,
+    pub(crate) benchmark_step: BenchmarkStep,
     #[serde(rename(serialize = "prepare-benchmark", deserialize = "prepare-benchmark"))]
     prepare_benchmark_step: Option<PrepareBenchmarkStep>,
     #[serde(rename(serialize = "teardown", deserialize = "teardown"))]
     teardown_step: Option<PrepareBenchmarkStep>,
+}
+
+fn default_type() -> String {
+    "postgres".to_string()
 }
 
 /// Represents the benchmark step, e.g.
@@ -46,13 +54,13 @@ pub(crate) struct BenchmarkDefinition {
 ///     - SET timescaledb.enable_direct_compress_insert = false
 /// ```
 #[derive(Debug, Deserialize, Serialize)]
-struct BenchmarkStep {
+pub(crate) struct BenchmarkStep {
     /// The session parameters for the benchmark run, set for all runs.
-    session: Vec<SessionValue>,
+    pub(crate) session: Vec<SessionValue>,
     /// The number of times the benchmark will run.
-    executions: u8,
+    pub(crate) executions: u8,
     /// The statements that will be benchmarked.
-    steps: Vec<Statement>,
+    pub(crate) steps: Vec<Statement>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -74,13 +82,13 @@ struct PrepareBenchmarkStep {
 /// It can only be a `String` or `None`
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(untagged)]
-enum SessionValue {
+pub(crate) enum SessionValue {
     String(String),
     None,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-struct Statement {
+pub(crate) struct Statement {
     name: Option<String>,
     before_run: Option<String>,
     run: String,
@@ -114,15 +122,13 @@ pub(crate) fn definition_from_yaml(input: &str) -> Result<BenchmarkDefinition, s
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::benchmark::benchmark_definition::ParameterValue::Vec;
-    use serde::de::Unexpected::Str;
     use std::fs::File;
     use std::io::{Read, Write};
 
     #[test]
     fn test_can_parse_yaml() {
         let mut contents = String::new();
-        File::open("../../benchmarks/benchy_definition.yml")
+        File::open("benchmarks/benchy_definition.yml")
             .unwrap()
             .read_to_string(&mut contents)
             .unwrap();
@@ -136,7 +142,7 @@ mod tests {
     #[test]
     fn test_has_all_fields_exists() {
         let mut contents = String::new();
-        File::open("../../benchmarks/benchy_definition.yml")
+        File::open("benchmarks/benchy_definition.yml")
             .unwrap()
             .read_to_string(&mut contents)
             .unwrap();

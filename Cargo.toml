@@ -5,5 +5,7 @@ edition = "2024"
 
 [dependencies]
 serde = { version = "1.0.229", features = ["derive"] }
-serde_yaml = "0.9.34+deprecated"
+serde_yaml = "0.9.34"
 serde_json = "1.0.154"
+log = "0.4.34"
+pretty_env_logger = "0.5.0"

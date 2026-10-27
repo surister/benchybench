@@ -1,2 +1,2 @@
-pub mod measurement;
-pub mod benchmark_definition;
+pub mod definition;
+pub mod runner;
