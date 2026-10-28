@@ -154,9 +154,10 @@ mod tests {
         // assert_eq!(definition.prepare_benchmark, "Benchmark some very cool");
         // assert_eq!(definition.parameters, vec!["s"])
 
-        let file = File::create("t.json")
+        File::create("t.json")
             .unwrap()
-            .write(&*serde_json::to_string(&definition).unwrap().into_bytes());
+            .write_all(&*serde_json::to_string(&definition).unwrap().into_bytes())
+            .unwrap();
 
         println!("{}", serde_json::to_string(&definition).unwrap());
     }
