@@ -1,4 +1,4 @@
-use crate::benchmark::definition::{Statement, Suite};
+use crate::benchmark::definition::{SessionValue, Statement, Suite};
 use std::time::{Duration, Instant};
 
 pub(crate) struct BenchmarkRunner<R: Runner> {
@@ -24,40 +24,58 @@ impl<R: Runner> BenchmarkRunner<R> {
         // chains of benchmarks.
         for suite in self.suites.iter() {
             log::info!("running suite: {}", suite.name);
-            // TODO: prepare-benchmark: run for every
+
             for benchmark in suite.benchmarks.iter() {
+                if let Some(prepare_benchmark_step) = &benchmark.prepare_benchmark_step {
+                    prepare_benchmark_step
+                        .steps
+                        .iter()
+                        .filter(|x| x.run != "")
+                        .map(|x| self.runner.run_query(&x.run))
+                        .collect()
+                }
+
                 let mut results: Vec<Duration> =
                     Vec::with_capacity(benchmark.benchmark_step.executions as usize);
-                // TODO: session
-                for _ in 0..benchmark.benchmark_step.executions {
-                    // TODO: run before_run
-                    let before = Instant::now();
-                    {
-                        for statement in benchmark.benchmark_step.steps.iter() {
-                            self.runner.run_benchmark(statement)
-                        }
+                for session in benchmark.benchmark_step.session.iter() {
+                    match session {
+                        SessionValue::String(query) => self.runner.run_query(query),
+                        SessionValue::None => (),
                     }
-                    results.push(before.elapsed())
+                }
+                for i in 0..benchmark.benchmark_step.executions {
+                    log::info!("Run n. {}", i);
+                    for statement in benchmark.benchmark_step.steps.iter() {
+                        if let Some(query) = statement.before_run.as_ref() {
+                            self.runner.run_query(&query);
+                        }
+                        let before = Instant::now();
+                        {
+                            self.runner.run_query(&statement.run)
+                        }
+                        results.push(before.elapsed())
+                    }
+                }
+                if let Some(teardown) = &benchmark.teardown_step {
+                    teardown
+                        .steps
+                        .iter()
+                        .map(|query| self.runner.run_query(&query.run))
+                        .collect()
                 }
             }
-            // TODO: teardown
         }
     }
 }
 
 pub(crate) trait Runner {
-    fn run_benchmark(&self, statement: &Statement);
-}
-
-pub(crate) enum RunnerType {
-    POSTGRES,
-    HTTP,
+    fn run_query(&self, statement: &String);
 }
 
 #[derive(Debug)]
 pub(crate) struct PostgresRunner {}
 impl Runner for PostgresRunner {
-    fn run_benchmark(&self, statement: &Statement) {
-        log::info!("Running statement {:?}", self)
+    fn run_query(&self, statement: &String) {
+        log::info!("Running statement {:?}", statement)
     }
 }

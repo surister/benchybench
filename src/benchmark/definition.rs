@@ -32,13 +32,13 @@ pub(crate) struct BenchmarkDefinition {
     pub(crate) parameters: Option<HashMap<String, ParameterValue>>,
     pub(crate) provides: Option<Vec<String>>,
     #[serde(rename(serialize = "requires", deserialize = "requires"))]
-    requires_step: Option<Vec<String>>,
+    pub(crate) requires_step: Option<Vec<String>>,
+    #[serde(rename(serialize = "prepare-benchmark", deserialize = "prepare-benchmark"))]
+    pub(crate) prepare_benchmark_step: Option<PrepareBenchmarkStep>,
     #[serde(rename(serialize = "benchmark", deserialize = "benchmark"))]
     pub(crate) benchmark_step: BenchmarkStep,
-    #[serde(rename(serialize = "prepare-benchmark", deserialize = "prepare-benchmark"))]
-    prepare_benchmark_step: Option<PrepareBenchmarkStep>,
     #[serde(rename(serialize = "teardown", deserialize = "teardown"))]
-    teardown_step: Option<PrepareBenchmarkStep>,
+    pub(crate) teardown_step: Option<PrepareBenchmarkStep>,
 }
 
 fn default_type() -> String {
@@ -64,11 +64,11 @@ pub(crate) struct BenchmarkStep {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-struct PrepareBenchmarkStep {
-    steps: Vec<Statement>,
+pub(crate) struct PrepareBenchmarkStep {
+    pub(crate) steps: Vec<Statement>,
 }
 
-/// Represents the possible value for a session parameter, e.g.
+/// Represents the value for a session parameter, e.g.
 /// ```
 /// benchmark:
 ///
@@ -76,10 +76,11 @@ struct PrepareBenchmarkStep {
 ///   session: # <-------
 ///     - SET timescaledb.enable_direct_compress_insert = false
 /// ```
-/// It would produce:
+///
+/// Example:
 /// `SessionValue('SET timescaledb.enable_direct_compress_insert = false')`
 ///
-/// It can only be a `String` or `None`
+/// It can only be a `String` or `None`.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(untagged)]
 pub(crate) enum SessionValue {
@@ -89,11 +90,11 @@ pub(crate) enum SessionValue {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct Statement {
-    name: Option<String>,
-    before_run: Option<String>,
-    run: String,
+    pub(crate) name: Option<String>,
+    pub(crate) before_run: Option<String>,
+    pub(crate) run: String,
     #[serde(default)]
-    parallel: bool,
+    pub(crate) parallel: bool,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
