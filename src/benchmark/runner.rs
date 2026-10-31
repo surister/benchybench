@@ -1,4 +1,10 @@
 use crate::benchmark::definition::{SessionValue, Statement, Suite};
+use log::log;
+use postgres::{Client, NoTls};
+use std::error;
+use std::fmt::format;
+use std::io::Error;
+use std::process::abort;
 use std::time::{Duration, Instant};
 
 pub(crate) struct BenchmarkRunner<R: Runner> {
@@ -11,7 +17,7 @@ impl<R: Runner> BenchmarkRunner<R> {
         Self { suites, runner }
     }
 
-    pub(crate) fn run(&self) {
+    pub(crate) fn run(&mut self) {
         log::info!(
             "found {} suite(s): {:?}",
             self.suites.iter().count(),
@@ -69,13 +75,69 @@ impl<R: Runner> BenchmarkRunner<R> {
 }
 
 pub(crate) trait Runner {
-    fn run_query(&self, statement: &String);
+    type Error;
+    fn run_query(&mut self, statement: &String);
+
+    fn prettify_error(&self, e: Self::Error) -> String;
 }
 
-#[derive(Debug)]
-pub(crate) struct PostgresRunner {}
+pub(crate) struct PostgresRunner {
+    client: Client,
+}
+
+impl PostgresRunner {
+    pub(crate) fn new() -> Self {
+        use postgres::{Client, NoTls};
+        let client = Client::connect("host=localhost user=postgres", NoTls).unwrap();
+        Self { client }
+    }
+}
 impl Runner for PostgresRunner {
-    fn run_query(&self, statement: &String) {
-        log::info!("Running statement {:?}", statement)
+    type Error = postgres::error::Error;
+
+    fn run_query(&mut self, statement: &String) {
+        log::debug!("Running statement: {:}", statement);
+        let result = self.client.query(statement, &[]);
+
+        if let Err(e) = result {
+            log::error!("statement: {:} produced the following error:", statement,);
+            log::error!("{}", self.prettify_error(e));
+            log::error!("aborting");
+
+            abort()
+        }
+    }
+
+    fn prettify_error(&self, e: Self::Error) -> String {
+        use postgres::error::ErrorPosition;
+
+        let Some(db) = e.as_db_error() else {
+            // Connection errors, client-side errors, etc.
+            return e.to_string();
+        };
+
+        // DbError's Display includes severity, message, detail, and hint.
+        let mut output = format!("\n{db}");
+
+        if let Some(context) = db.where_() {
+            output.push_str(&format!("\nCONTEXT: {context}"));
+        }
+        match db.position() {
+            Some(ErrorPosition::Original(position)) => {
+                // do proper error marking in the future here.
+                // output.push_str(format!("\n{}^", " ".repeat((position + 2) as usize)).as_str());
+                // it will probably be easier if we also pass the offending query text to
+                // the function and paint that with '^' given the error character position
+                output.push_str(format!("\nPOSITION: character {position}").as_str());
+            }
+            Some(ErrorPosition::Internal { position, query }) => {
+                output.push_str(&format!(
+                    "\nINTERNAL QUERY: {query}\nPOSITION: character {position}"
+                ));
+            }
+            None => {}
+        }
+        output.push_str(format!("\nSQLSTATE: {}", db.code().code()).as_str());
+        output
     }
 }
