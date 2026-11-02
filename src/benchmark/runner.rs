@@ -43,16 +43,19 @@ impl<R: Runner> BenchmarkRunner<R> {
 
                 let mut results: Vec<Duration> =
                     Vec::with_capacity(benchmark.benchmark_step.executions as usize);
-                for session in benchmark.benchmark_step.session.iter() {
-                    match session {
-                        SessionValue::String(query) => self.runner.run_query(query),
-                        SessionValue::None => (),
-                    }
+
+                if let Some(session) = &benchmark.benchmark_step.session {
+                    session.iter().for_each(|value| {
+                        if let SessionValue::String(query) = value {
+                            self.runner.run_query(query);
+                        }
+                    });
                 }
+
                 for i in 0..benchmark.benchmark_step.executions {
                     log::info!("Run n. {}", i);
                     for statement in benchmark.benchmark_step.steps.iter() {
-                        if let Some(query) = statement.before_run.as_ref() {
+                        if let Some(query) = &statement.before_run {
                             self.runner.run_query(&query);
                         }
                         let before = Instant::now();
@@ -66,8 +69,7 @@ impl<R: Runner> BenchmarkRunner<R> {
                     teardown
                         .steps
                         .iter()
-                        .map(|query| self.runner.run_query(&query.run))
-                        .collect()
+                        .for_each(|query| self.runner.run_query(&query.run))
                 }
             }
         }

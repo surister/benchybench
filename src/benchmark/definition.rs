@@ -56,7 +56,7 @@ fn default_type() -> String {
 #[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct BenchmarkStep {
     /// The session parameters for the benchmark run, set for all runs.
-    pub(crate) session: Vec<SessionValue>,
+    pub(crate) session: Option<Vec<SessionValue>>,
     /// The number of times the benchmark will run.
     pub(crate) executions: u8,
     /// The statements that will be benchmarked.
